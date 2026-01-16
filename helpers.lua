@@ -1,6 +1,6 @@
 local socket = require 'socket'
 
-local helpers = {drop_timer = 0}
+local helpers = {drop_timer = 0, place_timer = 0}
 
 local last_time = socket.gettime()
 

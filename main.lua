@@ -23,6 +23,7 @@ local function check_for_exit(key)
     return false
 end
 
+-- TODO: Probably have to divide this function into two functions later on
 local function check_block_collision(block, cursor_position, board)
     local y, x = cursor_position.y, cursor_position.x
 
@@ -49,7 +50,7 @@ local function check_block_collision(block, cursor_position, board)
         temp = 0
     end
 
-    -- If current block's is colliding with walls
+    -- If block is colliding with walls
     if x < 1 or x + max_length > BOARD_Y then
         return true
     end
@@ -59,7 +60,7 @@ local function check_block_collision(block, cursor_position, board)
         return true
     end
     
-    -- If current block collides with a block in the board 
+    -- If block collides with another block in the board 
     for i = 1, rows do
         for j = 1, cols do
             local isBlock = block[i][j] and true or false
@@ -77,10 +78,7 @@ local function check_block_collision(block, cursor_position, board)
 end
 
 local function move_cursor(cursor_position, key)
-    local delta_time = helpers.get_delta_time()
-    helpers.drop_timer = helpers.drop_timer + delta_time
-
-    if helpers.drop_timer > 0.5 then
+    if helpers.drop_timer > 0.2 then
         cursor_position.y = cursor_position.y + 1
         helpers.drop_timer = 0
     end
@@ -134,8 +132,17 @@ local function draw_board(board, board_win)
     end
 end
 
-local function place_block(current_block, board)
+local function place_block(block, board, cursor_position)
     -- TODO
+    local y, x = cursor_position.y, cursor_position.x
+
+    for i = 1, #block do
+        for j = 1, #block[i] do
+            if block[i][j] then
+                board[y + i - 1][x + j - 1] = true
+            end
+        end
+    end
 end
 
 local function game_loop(board, board_win)
@@ -145,6 +152,9 @@ local function game_loop(board, board_win)
 
    repeat
         board_win:clear()
+
+        local delta_time = helpers.get_delta_time()
+        helpers.drop_timer = helpers.drop_timer + delta_time
 
         if new_block then
             local current_block_index = math.random(1, #blocks)
@@ -171,10 +181,12 @@ local function game_loop(board, board_win)
 
         draw_board(board, board_win)
 
-        local placed = place_block(current_block, board)
-
-        if placed then
+        -- TODO: Wait a little bit before placing
+        if key == 97 then
+            place_block(current_block, board, cursor_position)
             new_block = true
+            cursor_position.y = 1
+            cursor_position.x = BOARD_X / 2
         end
 
         board_win:refresh()
