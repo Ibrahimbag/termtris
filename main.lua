@@ -24,7 +24,7 @@ local function check_for_exit(key)
 end
 
 -- TODO: Probably have to divide this function into two functions later on
-local function check_block_collision(block, cursor_position, board)
+local function check_wall_collision(block, cursor_position, board)
     local y, x = cursor_position.y, cursor_position.x
 
     local rows = #block
@@ -54,6 +54,13 @@ local function check_block_collision(block, cursor_position, board)
     if x < 1 or x + max_length > BOARD_Y then
         return true
     end
+end
+
+local function check_block_collision(block, cursor_position, board)
+    local y, x = cursor_position.y, cursor_position.x
+
+    local rows = #block
+    local cols = #block[1]
 
     -- If block collides with bottom of the board
     if y + rows > BOARD_Y then
@@ -78,7 +85,7 @@ local function check_block_collision(block, cursor_position, board)
 end
 
 local function move_cursor(cursor_position, key)
-    if helpers.drop_timer > 0.2 then
+    if helpers.drop_timer > 0.3 then
         cursor_position.y = cursor_position.y + 1
         helpers.drop_timer = 0
     end
@@ -133,7 +140,6 @@ local function draw_board(board, board_win)
 end
 
 local function place_block(block, board, cursor_position)
-    -- TODO
     local y, x = cursor_position.y, cursor_position.x
 
     for i = 1, #block do
@@ -168,7 +174,7 @@ local function game_loop(board, board_win)
 
         move_cursor(cursor_position, key)
 
-        if check_block_collision(current_block, cursor_position, board) then
+        if check_wall_collision(current_block, cursor_position, board) then
             cursor_position.y, cursor_position.x = temp_y, temp_x
         end
         board_win:mvaddstr(1, 1, max_length)
@@ -181,12 +187,19 @@ local function game_loop(board, board_win)
 
         draw_board(board, board_win)
 
-        -- TODO: Wait a little bit before placing
-        if key == 97 then
+        local block_collided = check_block_collision(current_block, cursor_position, board)
+
+        if block_collided then
+            helpers.place_timer = helpers.place_timer + delta_time
+            cursor_position.y, cursor_position.x = temp_y, temp_x
+        end
+
+        if helpers.place_timer > 0.6 then
             place_block(current_block, board, cursor_position)
             new_block = true
             cursor_position.y = 1
             cursor_position.x = BOARD_X / 2
+            helpers.place_timer = 0
         end
 
         board_win:refresh()
