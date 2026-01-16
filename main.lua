@@ -49,8 +49,8 @@ local function check_block_collision(block, cursor_position, board)
         temp = 0
     end
 
-    -- If current block's right side is colliding with walls
-    if x < 0 or x + max_length > BOARD_Y then --board[1][x] == nil or board[1][x + max_length] == nil then
+    -- If current block's is colliding with walls
+    if x < 1 or x + max_length > BOARD_Y then
         return true
     end
 
