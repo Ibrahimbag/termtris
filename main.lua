@@ -23,6 +23,12 @@ local function check_for_exit(key)
     return false
 end
 
+local function get_new_block(new_block)
+    local current_block_index = math.random(1, #blocks)
+    new_block.val = false
+    return blocks[current_block_index]
+end
+
 -- TODO: Probably have to divide this function into two functions later on
 local function check_wall_collision(block, cursor_position, board)
     local y, x = cursor_position.y, cursor_position.x
@@ -152,7 +158,7 @@ local function place_block(block, board, cursor_position)
 end
 
 local function game_loop(board, board_win)
-    local new_block = true
+    local new_block = {val = true}
     local current_block = {}
     local cursor_position = {y = 1, x = BOARD_X / 2}
 
@@ -162,10 +168,8 @@ local function game_loop(board, board_win)
         local delta_time = helpers.get_delta_time()
         helpers.drop_timer = helpers.drop_timer + delta_time
 
-        if new_block then
-            local current_block_index = math.random(1, #blocks)
-            current_block = blocks[current_block_index]
-            new_block = false
+        if new_block.val then
+            current_block = get_new_block(new_block)
         end
 
         local key = board_win:getch()
@@ -183,10 +187,6 @@ local function game_loop(board, board_win)
             current_block = rotate_block(current_block)
         end
 
-        draw_current_block(current_block, cursor_position, board_win)
-
-        draw_board(board, board_win)
-
         local block_collided = check_block_collision(current_block, cursor_position, board)
 
         if block_collided then
@@ -196,11 +196,15 @@ local function game_loop(board, board_win)
 
         if helpers.place_timer > 0.6 then
             place_block(current_block, board, cursor_position)
-            new_block = true
+            current_block = get_new_block(new_block)
             cursor_position.y = 1
             cursor_position.x = BOARD_X / 2
             helpers.place_timer = 0
         end
+
+        draw_current_block(current_block, cursor_position, board_win)
+
+        draw_board(board, board_win)
 
         board_win:refresh()
 
