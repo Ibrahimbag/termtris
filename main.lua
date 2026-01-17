@@ -177,7 +177,7 @@ local function game_loop(board, board_win)
 
         move_cursor(cursor_position, key)
 
-        if check_wall_collision(current_block, cursor_position, board) then
+        if check_wall_collision(current_block, cursor_position) then
             cursor_position.x = temp_x
         end
         board_win:mvaddstr(1, 1, max_length)
