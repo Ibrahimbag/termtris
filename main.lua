@@ -56,7 +56,7 @@ local function check_wall_collision(block, cursor_position)
     end
 
     -- If block is colliding with walls
-    if x < 1 or x + max_length > BOARD_Y then
+    if x < 1 or x + max_length > BOARD_X then
         return true
     end
 end
@@ -160,6 +160,7 @@ local function game_loop(board, board_win)
     local new_block = {val = true}
     local current_block = {}
     local cursor_position = {y = 1, x = BOARD_X / 2}
+    local v = false
 
    repeat
         board_win:clear()
@@ -177,13 +178,24 @@ local function game_loop(board, board_win)
 
         move_cursor(cursor_position, key)
 
-        if check_wall_collision(current_block, cursor_position) then
-            cursor_position.x = temp_x
-        end
-        board_win:mvaddstr(1, 1, max_length)
+        local block_rotated = false
 
         if key == curses.KEY_UP then
             current_block = rotate_block(current_block)
+            block_rotated = true
+        end
+
+        if check_wall_collision(current_block, cursor_position) then
+            cursor_position.x = temp_x
+            
+            if block_rotated then
+                cursor_position.x = temp_x - max_length + 2
+                v = true
+            end
+        end
+
+        if v then
+            board_win:mvaddstr(1, 1, max_length)
         end
 
         local block_collided = check_block_collision(current_block, cursor_position, board)
