@@ -29,8 +29,7 @@ local function get_new_block(new_block)
     return blocks[current_block_index]
 end
 
--- TODO: Probably have to divide this function into two functions later on
-local function check_wall_collision(block, cursor_position, board)
+local function check_wall_collision(block, cursor_position)
     local y, x = cursor_position.y, cursor_position.x
 
     local rows = #block
