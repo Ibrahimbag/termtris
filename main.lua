@@ -36,7 +36,7 @@ local function check_wall_collision(block, cursor_position)
     local cols = #block[1]
 
     -- Get length of the longest row
-    max_length = 0
+    local max_length = 0
     local temp = 0
 
     for i = 1, rows, 1 do
@@ -57,8 +57,10 @@ local function check_wall_collision(block, cursor_position)
 
     -- If block is colliding with walls
     if x < 1 or x + max_length > BOARD_X then
-        return true
+        return true, max_length
     end
+
+    return false, max_length
 end
 
 local function check_block_collision(block, cursor_position, board)
@@ -159,6 +161,7 @@ end
 local function game_loop(board, board_win)
     local new_block = {val = true}
     local current_block = {}
+    local rotated_block = {}
     local cursor_position = {y = 1, x = BOARD_X / 2}
     local v = false
 
@@ -178,27 +181,30 @@ local function game_loop(board, board_win)
 
         move_cursor(cursor_position, key)
 
-        local block_rotated = false
-
         if key == curses.KEY_UP then
-            current_block = rotate_block(current_block)
-            block_rotated = true
-        end
+            rotated_block = rotate_block(current_block)
 
-        if check_wall_collision(current_block, cursor_position) then
-            cursor_position.x = temp_x
-            
-            if block_rotated then
-                cursor_position.x = temp_x - max_length + 2
-                v = true
+            local ret1, max_length = check_wall_collision(rotated_block, cursor_position)
+            local ret2 = check_block_collision(rotated_block, cursor_position, board)
+
+            if ret1 then
+                cursor_position.x = temp_x - max_length + 1
             end
+
+            if not ret2 then
+                current_block = rotated_block -- This is temporary. change it later with a better algorithm
+            end
+        else
+            rotated_block = nil
         end
 
-        if v then
-            board_win:mvaddstr(1, 1, max_length)
+        local block_collided = check_wall_collision(current_block, cursor_position)
+
+        if block_collided and rotated_block == nil then
+            cursor_position.x = temp_x
         end
 
-        local block_collided = check_block_collision(current_block, cursor_position, board)
+        block_collided = check_block_collision(current_block, cursor_position, board)
 
         if block_collided then
             helpers.place_timer = helpers.place_timer + delta_time
