@@ -4,7 +4,7 @@ local blocks = require 'blocks'
 local helpers = require 'helpers'
 
 local WIN_Y, WIN_X = 0, 0
-local BOARD_Y, BOARD_X = 20, 20
+local BOARD_Y, BOARD_X = 20, 10
 
 local function init_board(board)
     for i = 1, BOARD_Y do
@@ -56,7 +56,7 @@ local function check_wall_collision(block, cursor_position)
     end
 
     -- If block is colliding with walls
-    if x < 1 or x + max_length > BOARD_X then
+    if x < 1 or x + max_length - 1 > BOARD_X then
         return true, max_length
     end
 
@@ -70,7 +70,7 @@ local function check_block_collision(block, cursor_position, board)
     local cols = #block[1]
 
     -- If block collides with bottom of the board
-    if y + rows > BOARD_Y then
+    if y + rows > BOARD_Y + 1 then
         return true
     end
     
@@ -158,6 +158,27 @@ local function place_block(block, board, cursor_position)
     end
 end
 
+local function clear_lines(board)
+    local rows = #board
+    local cols = #board[1]
+
+    for i = 1, rows, 1 do
+        local v = true
+
+        for j = 1, cols, 1 do
+            if board[i][j] == false then
+                v = false
+            end    
+        end
+
+        if v then
+            return true
+        end
+    end
+
+    return false
+end
+
 local function game_loop(board, board_win)
     local new_block = {val = true}
     local current_block = {}
@@ -219,6 +240,12 @@ local function game_loop(board, board_win)
             helpers.place_timer = 0
         end
 
+        local ret = clear_lines(board)
+
+        if ret then
+            break
+        end
+
         draw_current_block(current_block, cursor_position, board_win)
 
         draw_board(board, board_win)
@@ -235,7 +262,7 @@ local function main()
     curses.echo(false)
     curses.cbreak()
 
-    local board_win = curses.newwin(BOARD_Y + 1, BOARD_X + 1, 0, 0) -- 1 extra space for box
+    local board_win = curses.newwin(BOARD_Y + 2, BOARD_X + 2, 0, 0) -- 2 extra space for box
     board_win:keypad(true)
     board_win:nodelay(true)
 
