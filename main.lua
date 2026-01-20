@@ -163,20 +163,27 @@ local function clear_lines(board)
     local cols = #board[1]
 
     for i = 1, rows, 1 do
-        local v = true
+        local line_full = true
 
         for j = 1, cols, 1 do
             if board[i][j] == false then
-                v = false
-            end    
+                line_full = false
+                break
+            end
         end
 
-        if v then
-            return true
+        if line_full then
+            for j = 1, cols do
+                board[i][j] = false
+            end
+
+            for k = i, 2, -1 do
+                for l = 1, cols do
+                    board[k][l] = board[k - 1][l]
+                end
+            end
         end
     end
-
-    return false
 end
 
 local function game_loop(board, board_win)
@@ -240,11 +247,7 @@ local function game_loop(board, board_win)
             helpers.place_timer = 0
         end
 
-        local ret = clear_lines(board)
-
-        if ret then
-            break
-        end
+        clear_lines(board)
 
         draw_current_block(current_block, cursor_position, board_win)
 
