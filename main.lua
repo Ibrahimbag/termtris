@@ -15,9 +15,15 @@ local function init_board(board)
     end
 end
 
-local function check_for_exit(key)
+local function check_for_exit(key, board)
     if key == 81 or key == 113 then -- Q or q key
         return true
+    end
+
+    for _, value in pairs(board[1]) do
+        if value then
+            return true
+        end
     end
 
     return false
@@ -256,7 +262,7 @@ local function game_loop(board, board_win)
         board_win:refresh()
 
         socket.sleep(0.07)
-   until check_for_exit(key)
+   until check_for_exit(key, board)
 end
 
 local function main()
