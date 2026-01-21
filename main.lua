@@ -97,8 +97,28 @@ local function check_block_collision(block, cursor_position, board)
     return false
 end
 
-local function move_cursor(cursor_position, key)
-    if helpers.drop_timer > 0.3 then
+local function move_cursor(cursor_position, block, board, key)
+    -- Hard drop
+    if key == 90 or key == 122 then -- z or Z
+        local candidate_y = cursor_position.y
+
+        -- Move down until the block would collide if moved further
+        while not check_block_collision(block, {y = candidate_y + 1, x = cursor_position.x}, board) do
+            candidate_y = candidate_y + 1
+        end
+
+        cursor_position.y = candidate_y
+
+        -- Trigger immediate placement next loop
+        helpers.place_timer = 0.61
+
+        return
+    end
+
+    -- Less cooldown if soft drop
+    local cooldown = key == curses.KEY_DOWN and 0.1 or 0.3
+
+    if helpers.drop_timer > cooldown then
         cursor_position.y = cursor_position.y + 1
         helpers.drop_timer = 0
     end
@@ -213,7 +233,7 @@ local function game_loop(board, board_win)
 
         local temp_y, temp_x = cursor_position.y, cursor_position.x
 
-        move_cursor(cursor_position, key)
+        move_cursor(cursor_position, current_block, board, key)
 
         if key == curses.KEY_UP then
             rotated_block = rotate_block(current_block)
