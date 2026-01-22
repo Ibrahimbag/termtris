@@ -198,6 +198,8 @@ local function clear_lines(board)
     local rows = #board
     local cols = #board[1]
 
+    local lines_cleared = 0
+
     for i = 1, rows, 1 do
         local line_full = true
 
@@ -218,8 +220,26 @@ local function clear_lines(board)
                     board[k][l] = board[k - 1][l]
                 end
             end
+
+            lines_cleared = lines_cleared + 1
         end
     end
+
+    return lines_cleared
+end
+
+local function calculate_points(lines_cleared, level)
+    if lines_cleared == 0 then
+        return 0
+    end
+
+    local base_points = {100, 300, 500, 800}
+
+    local base_point = base_points[lines_cleared]
+
+    local points = base_point * (level + 1)
+
+    return points
 end
 
 local function game_loop(board, board_win)
@@ -227,6 +247,9 @@ local function game_loop(board, board_win)
     local current_block = {}
     local rotated_block = {}
     local cursor_position = {y = 1, x = BOARD_X / 2}
+    local lines_cleared = 0
+    local points = 0
+    local level = 0
 
    repeat
         board_win:clear()
@@ -282,11 +305,22 @@ local function game_loop(board, board_win)
             helpers.place_timer = 0
         end
 
-        clear_lines(board)
+        local lines_cleared_temp = clear_lines(board)
+
+        points = points + calculate_points(lines_cleared_temp, level) -- keep level at 0 for now
+
+        lines_cleared = lines_cleared + lines_cleared_temp
+
+        level = math.floor(lines_cleared / 10)
 
         draw_current_block(current_block, cursor_position, board_win)
 
         draw_board(board, board_win)
+
+        -- DEBUG
+        board_win:mvaddstr(1, 1, points)
+        board_win:mvaddstr(1, 9, lines_cleared)
+        board_win:mvaddstr(1, 17, level)
 
         board_win:refresh()
 
