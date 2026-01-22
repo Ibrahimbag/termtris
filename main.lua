@@ -148,14 +148,20 @@ end
 local function draw_current_block(current_block, cursor_position, board_win)
     local y, x = cursor_position.y, cursor_position.x
 
+    local function map_x(logical_x)
+        return (logical_x - 1) * 2 + 1
+    end
+
     for i = 1, #current_block do
         for j = 1, #current_block[i] do
             local isBlock = current_block[i][j] and true or false
+            local logical_col = x + j - 1
+            local sx = map_x(logical_col)
 
             if isBlock then
-                board_win:mvaddstr(y + i - 1, x + j - 1, "#")
+                board_win:mvaddstr(y + i - 1, sx, "##")
             else
-                board_win:mvaddstr(y + i - 1, x + j - 1, " ")
+                board_win:mvaddstr(y + i - 1, sx, "  ")
             end
         end
     end
@@ -163,10 +169,14 @@ end
 
 local function draw_board(board, board_win)
     board_win:box(0, 0)
+    local function map_x(logical_x)
+        return (logical_x - 1) * 2 + 1
+    end
+
     for i = 1, BOARD_Y do
         for j = 1, BOARD_X do
             if board[i][j] then
-                board_win:mvaddch(i, j, "#")
+                board_win:mvaddstr(i, map_x(j), "##")
             end
         end
     end
@@ -217,7 +227,6 @@ local function game_loop(board, board_win)
     local current_block = {}
     local rotated_block = {}
     local cursor_position = {y = 1, x = BOARD_X / 2}
-    local v = false
 
    repeat
         board_win:clear()
@@ -291,7 +300,7 @@ local function main()
     curses.echo(false)
     curses.cbreak()
 
-    local board_win = curses.newwin(BOARD_Y + 2, BOARD_X + 2, 0, 0) -- 2 extra space for box
+    local board_win = curses.newwin(BOARD_Y + 2, BOARD_X * 2 + 2, 0, 0) -- 2 extra space for box; doubled visual width
     board_win:keypad(true)
     board_win:nodelay(true)
 
