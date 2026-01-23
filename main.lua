@@ -326,14 +326,6 @@ local function game_loop(board, board_win, stats_win, next_win)
             cursor_position.y, cursor_position.x = temp_y, temp_x
         end
 
-        if helpers.place_timer > 0.6 then
-            place_block(current_block, board, cursor_position)
-            new_block = true
-            cursor_position.y = 1
-            cursor_position.x = BOARD_X / 2
-            helpers.place_timer = 0
-        end
-
         local lines_cleared_temp = clear_lines(board)
 
         points = points + calculate_points(lines_cleared_temp, level)
@@ -349,6 +341,14 @@ local function game_loop(board, board_win, stats_win, next_win)
         draw_stats(stats_win, points, lines_cleared, level)
 
         draw_next(next_win, next_block)
+
+        if helpers.place_timer > 0.6 then
+            place_block(current_block, board, cursor_position)
+            new_block = true
+            cursor_position.y = 1
+            cursor_position.x = BOARD_X / 2
+            helpers.place_timer = 0
+        end
 
         board_win:refresh()
         stats_win:refresh()
