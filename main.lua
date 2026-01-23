@@ -242,9 +242,21 @@ local function calculate_points(lines_cleared, level)
     return points
 end
 
-local function game_loop(board, board_win)
+local function draw_stats(stats_win, points, lines_cleared, level)
+    stats_win:mvaddstr(2, 1, "Points: " .. points)
+    stats_win:mvaddstr(4, 1, "Lines: " .. lines_cleared)
+    stats_win:mvaddstr(6, 1, "Level: " .. level)
+end
+
+-- TODO
+local function draw_next(next_win, next_block)
+    next_win:mvaddstr(1,1, "#")
+end
+
+local function game_loop(board, board_win, stats_win, next_win)
     local new_block = {val = true}
     local current_block = {}
+    local next_block = {} -- TODO
     local rotated_block = {}
     local cursor_position = {y = 1, x = BOARD_X / 2}
     local lines_cleared = 0
@@ -307,7 +319,7 @@ local function game_loop(board, board_win)
 
         local lines_cleared_temp = clear_lines(board)
 
-        points = points + calculate_points(lines_cleared_temp, level) -- keep level at 0 for now
+        points = points + calculate_points(lines_cleared_temp, level)
 
         lines_cleared = lines_cleared + lines_cleared_temp
 
@@ -318,11 +330,16 @@ local function game_loop(board, board_win)
         draw_board(board, board_win)
 
         -- DEBUG
-        board_win:mvaddstr(1, 1, points)
-        board_win:mvaddstr(1, 9, lines_cleared)
-        board_win:mvaddstr(1, 17, level)
+        draw_stats(stats_win, points, lines_cleared, level)
+
+        -- TODO
+        draw_next(next_win, next_block)
+
+        next_win:box(0, 0)
 
         board_win:refresh()
+        stats_win:refresh()
+        next_win:refresh()
 
         socket.sleep(0.07)
    until check_for_exit(key, board)
@@ -331,12 +348,20 @@ end
 local function main()
     local stdscr = curses.initscr()
     WIN_Y, WIN_X = stdscr:getmaxyx()
+    
     curses.echo(false)
     curses.cbreak()
 
-    local board_win = curses.newwin(BOARD_Y + 2, BOARD_X * 2 + 2, 0, 0) -- 2 extra space for box; doubled visual width
+    local start_y = math.floor(WIN_Y / 2 - (BOARD_Y + 2) / 2)
+    local start_x = math.floor(WIN_X / 2 - (BOARD_X * 2 + 2) / 2)
+
+    local board_win = curses.newwin(BOARD_Y + 2, BOARD_X * 2 + 2, start_y, start_x) -- 2 extra space for box; doubled visual width
     board_win:keypad(true)
     board_win:nodelay(true)
+
+    local stats_win = curses.newwin(9, start_x, start_y, 0)
+
+    local next_win = curses.newwin(9, start_x, start_y, start_x + (BOARD_X * 2 + 2))
 
     math.randomseed(os.time())
 
@@ -344,7 +369,7 @@ local function main()
 
     init_board(board)
 
-    game_loop(board, board_win)
+    game_loop(board, board_win, stats_win, next_win)
 
     curses.endwin()
 end
