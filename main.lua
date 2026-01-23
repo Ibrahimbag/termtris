@@ -29,9 +29,8 @@ local function check_for_exit(key, board)
     return false
 end
 
-local function get_new_block(new_block)
+local function get_new_block()
     local current_block_index = math.random(1, #blocks)
-    new_block.val = false
     return blocks[current_block_index]
 end
 
@@ -248,15 +247,29 @@ local function draw_stats(stats_win, points, lines_cleared, level)
     stats_win:mvaddstr(6, 1, "Level: " .. level)
 end
 
--- TODO
 local function draw_next(next_win, next_block)
-    next_win:mvaddstr(1,1, "#")
+    local rows = #next_block
+    local cols = #next_block[1]
+
+    local function map_x(logical_x)
+        return (logical_x - 1) * 2 + 1
+    end
+
+    for i = 1, rows do
+        for j = 1, cols do
+            if next_block[i][j] then
+                local logical_col = 5 + j - 1
+                local sx = map_x(logical_col)
+                next_win:mvaddstr(i + 3, sx, "##")
+            end
+        end
+    end
 end
 
 local function game_loop(board, board_win, stats_win, next_win)
-    local new_block = {val = true}
+    local new_block = true
     local current_block = {}
-    local next_block = {} -- TODO
+    local next_block = get_new_block()
     local rotated_block = {}
     local cursor_position = {y = 1, x = BOARD_X / 2}
     local lines_cleared = 0
@@ -265,12 +278,16 @@ local function game_loop(board, board_win, stats_win, next_win)
 
    repeat
         board_win:clear()
+        stats_win:clear()
+        next_win:clear()
 
         local delta_time = helpers.get_delta_time()
         helpers.drop_timer = helpers.drop_timer + delta_time
 
-        if new_block.val then
-            current_block = get_new_block(new_block)
+        if new_block then
+            current_block = next_block
+            next_block = get_new_block()
+            new_block = false
         end
 
         local key = board_win:getch()
@@ -311,7 +328,7 @@ local function game_loop(board, board_win, stats_win, next_win)
 
         if helpers.place_timer > 0.6 then
             place_block(current_block, board, cursor_position)
-            current_block = get_new_block(new_block)
+            new_block = true
             cursor_position.y = 1
             cursor_position.x = BOARD_X / 2
             helpers.place_timer = 0
@@ -329,13 +346,9 @@ local function game_loop(board, board_win, stats_win, next_win)
 
         draw_board(board, board_win)
 
-        -- DEBUG
         draw_stats(stats_win, points, lines_cleared, level)
 
-        -- TODO
         draw_next(next_win, next_block)
-
-        next_win:box(0, 0)
 
         board_win:refresh()
         stats_win:refresh()
