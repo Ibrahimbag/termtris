@@ -6,11 +6,33 @@ local helpers = require 'helpers'
 local WIN_Y, WIN_X = 0, 0
 local BOARD_Y, BOARD_X = 20, 10
 
-local function init_board(board)
+local function init_color()
+    if not curses.has_colors() then
+        return false
+    end
+
+    curses.start_color()
+    curses.use_default_colors()
+
+    curses.init_pair(1, -1, 6)
+    curses.init_pair(2, -1, 4)
+    curses.init_pair(3, -1, 3)
+    curses.init_pair(4, -1, 7)
+    curses.init_pair(5, -1, 2)
+    curses.init_pair(6, -1, 5)
+    curses.init_pair(7, -1, 1)
+
+    return true
+end
+
+local function init_board(board, board_colors)
     for i = 1, BOARD_Y do
         board[i] = {}
+        board_colors[i] = {}
+
         for j = 1, BOARD_X do
             board[i][j] = false
+            board_colors[i][j] = 0
         end
     end
 end
@@ -31,7 +53,7 @@ end
 
 local function get_new_block()
     local current_block_index = math.random(1, #blocks)
-    return blocks[current_block_index]
+    return blocks[current_block_index], current_block_index
 end
 
 local function check_wall_collision(block, cursor_position)
@@ -146,27 +168,29 @@ end
 
 local function draw_current_block(current_block, cursor_position, board_win)
     local y, x = cursor_position.y, cursor_position.x
+    local block = current_block.block
+    local color_index = current_block.index
 
     local function map_x(logical_x)
         return (logical_x - 1) * 2 + 1
     end
 
-    for i = 1, #current_block do
-        for j = 1, #current_block[i] do
-            local isBlock = current_block[i][j] and true or false
+    for i = 1, #block do
+        for j = 1, #block[i] do
+            local isBlock = block[i][j] and true or false
             local logical_col = x + j - 1
             local sx = map_x(logical_col)
 
             if isBlock then
-                board_win:mvaddstr(y + i - 1, sx, "##")
-            else
+                board_win:attron(curses.color_pair(color_index))
                 board_win:mvaddstr(y + i - 1, sx, "  ")
+                board_win:attroff(curses.color_pair(color_index))
             end
         end
     end
 end
 
-local function draw_board(board, board_win)
+local function draw_board(board, board_colors, board_win)
     board_win:box(0, 0)
     local function map_x(logical_x)
         return (logical_x - 1) * 2 + 1
@@ -175,25 +199,31 @@ local function draw_board(board, board_win)
     for i = 1, BOARD_Y do
         for j = 1, BOARD_X do
             if board[i][j] then
-                board_win:mvaddstr(i, map_x(j), "##")
+                board_win:attron(curses.color_pair(board_colors[i][j]))
+                board_win:mvaddstr(i, map_x(j), "  ")
+                board_win:attroff(curses.color_pair(board_colors[i][j]))
             end
         end
     end
 end
 
-local function place_block(block, board, cursor_position)
+local function place_block(current_block, board, board_colors, cursor_position)
     local y, x = cursor_position.y, cursor_position.x
+
+    local block = current_block.block
+    local color_index = current_block.index
 
     for i = 1, #block do
         for j = 1, #block[i] do
             if block[i][j] then
                 board[y + i - 1][x + j - 1] = true
+                board_colors[y + i - 1][x + j - 1] = color_index
             end
         end
     end
 end
 
-local function clear_lines(board)
+local function clear_lines(board, board_colors)
     local rows = #board
     local cols = #board[1]
 
@@ -212,11 +242,13 @@ local function clear_lines(board)
         if line_full then
             for j = 1, cols do
                 board[i][j] = false
+                board_colors[i][j] = 0
             end
 
             for k = i, 2, -1 do
                 for l = 1, cols do
                     board[k][l] = board[k - 1][l]
+                    board_colors[k][l] = board_colors[k -1][l]
                 end
             end
 
@@ -247,7 +279,7 @@ local function draw_stats(stats_win, points, lines_cleared, level)
     stats_win:mvaddstr(6, 1, "Level: " .. level)
 end
 
-local function draw_next(next_win, next_block)
+local function draw_next(next_win, next_block, next_block_index)
     local rows = #next_block
     local cols = #next_block[1]
 
@@ -260,16 +292,19 @@ local function draw_next(next_win, next_block)
             if next_block[i][j] then
                 local logical_col = 5 + j - 1
                 local sx = map_x(logical_col)
-                next_win:mvaddstr(i + 3, sx, "##")
+                next_win:attron(curses.color_pair(next_block_index))
+                next_win:mvaddstr(i + 3, sx, "  ")
+                next_win:attroff(curses.color_pair(next_block_index))
             end
         end
     end
 end
 
-local function game_loop(board, board_win, stats_win, next_win)
+local function game_loop(board, board_colors, board_win, stats_win, next_win)
     local new_block = true
-    local current_block = {}
+    local current_block = {block = {}, index = -1}
     local next_block = get_new_block()
+    local next_block_index = 1
     local rotated_block = {}
     local cursor_position = {y = 1, x = BOARD_X / 2}
     local lines_cleared = 0
@@ -285,8 +320,9 @@ local function game_loop(board, board_win, stats_win, next_win)
         helpers.drop_timer = helpers.drop_timer + delta_time
 
         if new_block then
-            current_block = next_block
-            next_block = get_new_block()
+            current_block.block = next_block
+            current_block.index = next_block_index
+            next_block, next_block_index = get_new_block()
             new_block = false
         end
 
@@ -294,10 +330,10 @@ local function game_loop(board, board_win, stats_win, next_win)
 
         local temp_y, temp_x = cursor_position.y, cursor_position.x
 
-        move_cursor(cursor_position, current_block, board, key)
+        move_cursor(cursor_position, current_block.block, board, key)
 
         if key == curses.KEY_UP then
-            rotated_block = rotate_block(current_block)
+            rotated_block = rotate_block(current_block.block)
 
             local ret1, max_length = check_wall_collision(rotated_block, cursor_position)
             local ret2 = check_block_collision(rotated_block, cursor_position, board)
@@ -307,26 +343,26 @@ local function game_loop(board, board_win, stats_win, next_win)
             end
 
             if not ret2 then
-                current_block = rotated_block -- This is temporary. change it later with a better algorithm
+                current_block.block = rotated_block -- This is temporary. change it later with a better algorithm
             end
         else
             rotated_block = nil
         end
 
-        local block_collided = check_wall_collision(current_block, cursor_position)
+        local block_collided = check_wall_collision(current_block.block, cursor_position)
 
         if block_collided and rotated_block == nil then
             cursor_position.x = temp_x
         end
 
-        block_collided = check_block_collision(current_block, cursor_position, board)
+        block_collided = check_block_collision(current_block.block, cursor_position, board)
 
         if block_collided then
             helpers.place_timer = helpers.place_timer + delta_time
             cursor_position.y, cursor_position.x = temp_y, temp_x
         end
 
-        local lines_cleared_temp = clear_lines(board)
+        local lines_cleared_temp = clear_lines(board, board_colors)
 
         points = points + calculate_points(lines_cleared_temp, level)
 
@@ -336,14 +372,14 @@ local function game_loop(board, board_win, stats_win, next_win)
 
         draw_current_block(current_block, cursor_position, board_win)
 
-        draw_board(board, board_win)
+        draw_board(board, board_colors, board_win)
 
         draw_stats(stats_win, points, lines_cleared, level)
 
-        draw_next(next_win, next_block)
+        draw_next(next_win, next_block, next_block_index)
 
         if helpers.place_timer > 0.6 then
-            place_block(current_block, board, cursor_position)
+            place_block(current_block, board, board_colors, cursor_position)
             new_block = true
             cursor_position.y = 1
             cursor_position.x = BOARD_X / 2
@@ -376,13 +412,16 @@ local function main()
 
     local next_win = curses.newwin(9, start_x, start_y, start_x + (BOARD_X * 2 + 2))
 
+    init_color()
+
     math.randomseed(os.time())
 
     local board = {}
+    local board_colors = {}
 
-    init_board(board)
+    init_board(board, board_colors)
 
-    game_loop(board, board_win, stats_win, next_win)
+    game_loop(board, board_colors, board_win, stats_win, next_win)
 
     curses.endwin()
 end
