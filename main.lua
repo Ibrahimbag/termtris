@@ -37,6 +37,19 @@ local function init_board(board, board_colors)
     end
 end
 
+local function draw_help_win(help_win)
+
+    local _, width = help_win:getmaxyx()
+    local center_x = math.floor(width / 2) 
+
+    help_win:mvaddstr(1, 5, "← → Move")
+    help_win:mvaddstr(3, 5, "↑ Rotate")
+    help_win:mvaddstr(5, 5, "↓ Soft drop")
+    help_win:mvaddstr(7, 5, "Z Hard drop")
+    help_win:mvaddstr(9, 5, "Q Quit game")
+    help_win:refresh()
+end
+
 local function check_for_exit(key, board)
     if key == 81 or key == 113 then -- Q or q key
         return true
@@ -226,6 +239,7 @@ end
 
 local function draw_board(board, board_colors, board_win)
     board_win:box(0, 0)
+
     local function map_x(logical_x)
         return (logical_x - 1) * 2 + 1
     end
@@ -334,7 +348,7 @@ local function draw_next(next_win, next_block, next_block_index)
     end
 end
 
-local function game_loop(board, board_colors, board_win, stats_win, next_win)
+local function game_loop(board, board_colors, board_win, stats_win, next_win, help_win)
     local new_block = true
     local current_block = {block = {}, index = -1}
     local next_block = get_new_block()
@@ -344,6 +358,8 @@ local function game_loop(board, board_colors, board_win, stats_win, next_win)
     local lines_cleared = 0
     local points = 0
     local level = 0
+
+    draw_help_win(help_win)
 
    repeat
         board_win:clear()
@@ -424,9 +440,13 @@ local function game_loop(board, board_colors, board_win, stats_win, next_win)
 
         socket.sleep(0.07)
    until check_for_exit(key, board)
+   
+   help_win:clear()
 end
 
 local function main()
+    os.setlocale("", "all")
+
     local stdscr = curses.initscr()
     WIN_Y, WIN_X = stdscr:getmaxyx()
     
@@ -444,6 +464,8 @@ local function main()
 
     local next_win = curses.newwin(9, start_x, start_y, start_x + (BOARD_X * 2 + 2))
 
+    local help_win = curses.newwin(11, start_x, start_y + 9, start_x + (BOARD_X * 2 + 2))
+
     init_color()
 
     math.randomseed(os.time())
@@ -453,7 +475,7 @@ local function main()
 
     init_board(board, board_colors)
 
-    game_loop(board, board_colors, board_win, stats_win, next_win)
+    game_loop(board, board_colors, board_win, stats_win, next_win, help_win)
 
     curses.endwin()
 end
