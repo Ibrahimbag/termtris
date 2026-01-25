@@ -6,6 +6,29 @@ local helpers = require 'helpers'
 local WIN_Y, WIN_X = 0, 0
 local BOARD_Y, BOARD_X = 20, 10
 
+local function init_curses()
+    local stdscr = curses.initscr()
+    WIN_Y, WIN_X = stdscr:getmaxyx()
+    
+    curses.echo(false)
+    curses.cbreak()
+
+    local start_y = math.floor(WIN_Y / 2 - (BOARD_Y + 2) / 2)
+    local start_x = math.floor(WIN_X / 2 - (BOARD_X * 2 + 2) / 2)
+
+    local board_win = curses.newwin(BOARD_Y + 2, BOARD_X * 2 + 2, start_y, start_x) -- 2 extra space for box; doubled visual width
+    board_win:keypad(true)
+    board_win:nodelay(true)
+
+    local stats_win = curses.newwin(9, start_x, start_y, 0)
+
+    local next_win = curses.newwin(9, start_x, start_y, start_x + (BOARD_X * 2 + 2))
+
+    local help_win = curses.newwin(11, start_x, start_y + 9, start_x + (BOARD_X * 2 + 2))
+
+    return board_win, stats_win, next_win, help_win
+end
+
 local function init_color()
     if not curses.has_colors() then
         return false
@@ -447,24 +470,13 @@ end
 local function main()
     os.setlocale("", "all")
 
-    local stdscr = curses.initscr()
-    WIN_Y, WIN_X = stdscr:getmaxyx()
-    
-    curses.echo(false)
-    curses.cbreak()
+    local success, board_win, stats_win, next_win, help_win = pcall(init_curses)
 
-    local start_y = math.floor(WIN_Y / 2 - (BOARD_Y + 2) / 2)
-    local start_x = math.floor(WIN_X / 2 - (BOARD_X * 2 + 2) / 2)
-
-    local board_win = curses.newwin(BOARD_Y + 2, BOARD_X * 2 + 2, start_y, start_x) -- 2 extra space for box; doubled visual width
-    board_win:keypad(true)
-    board_win:nodelay(true)
-
-    local stats_win = curses.newwin(9, start_x, start_y, 0)
-
-    local next_win = curses.newwin(9, start_x, start_y, start_x + (BOARD_X * 2 + 2))
-
-    local help_win = curses.newwin(11, start_x, start_y + 9, start_x + (BOARD_X * 2 + 2))
+    if not success then
+        curses.endwin()
+        print("Failed to initialize curses. Try increasing your terminal resolution.")
+        return
+    end
 
     init_color()
 
