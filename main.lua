@@ -177,6 +177,29 @@ local function rotate_block(current_block)
     return rotated_block
 end
 
+-- Try to rotate block and apply simple wall-kick offsets.
+-- Returns rotated_block and a new cursor_position if successful, else nil.
+local function try_rotate_and_kick(block, cursor_position, board)
+    local rotated = rotate_block(block)
+
+    -- Horizontal kick offsets to try (SRS-like simple approach).
+    local offsets = {0, -1, 1, -2, 2}
+
+    for _, off in ipairs(offsets) do
+        local candidate_pos = {y = cursor_position.y, x = cursor_position.x + off}
+
+        local wall, _ = check_wall_collision(rotated, candidate_pos)
+        -- check_wall_collision returns (bool, max_length); use the boolean result
+        if not wall then
+            if not check_block_collision(rotated, candidate_pos, board) then
+                return rotated, candidate_pos
+            end
+        end
+    end
+
+    return nil, nil
+end
+
 local function draw_current_block(current_block, cursor_position, board_win)
     local y, x = cursor_position.y, cursor_position.x
     local block = current_block.block
@@ -344,17 +367,15 @@ local function game_loop(board, board_colors, board_win, stats_win, next_win)
         move_cursor(cursor_position, current_block.block, board, key, level)
 
         if key == curses.KEY_UP then
-            rotated_block = rotate_block(current_block.block)
+            local rotated, new_pos = try_rotate_and_kick(current_block.block, cursor_position, board)
 
-            local ret1, max_length = check_wall_collision(rotated_block, cursor_position)
-            local ret2 = check_block_collision(rotated_block, cursor_position, board)
-
-            if ret1 then
-                cursor_position.x = temp_x - max_length + 1
-            end
-
-            if not ret2 then
-                current_block.block = rotated_block -- This is temporary. change it later with a better algorithm
+            if rotated and new_pos then
+                current_block.block = rotated
+                cursor_position.x = new_pos.x
+                cursor_position.y = new_pos.y
+                rotated_block = rotated
+            else
+                rotated_block = nil
             end
         else
             rotated_block = nil
