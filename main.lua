@@ -118,7 +118,16 @@ local function check_block_collision(block, cursor_position, board)
     return false
 end
 
-local function move_cursor(cursor_position, block, board, key)
+local function get_fall_delay(level)
+    local base = 0.5       -- seconds at level 0
+    local factor = 0.9     -- 10% faster per level
+    local min = 0.05       -- cap speed
+
+    local delay = base * (factor ^ level)
+    return math.max(delay, min)
+end
+
+local function move_cursor(cursor_position, block, board, key, level)
     -- Hard drop
     if key == 90 or key == 122 then -- z or Z
         local candidate_y = cursor_position.y
@@ -136,8 +145,10 @@ local function move_cursor(cursor_position, block, board, key)
         return
     end
 
+    local gravity_delay = get_fall_delay(level)
+
     -- Less cooldown if soft drop
-    local cooldown = key == curses.KEY_DOWN and 0.1 or 0.3
+    local cooldown = key == curses.KEY_DOWN and 0.05 or gravity_delay
 
     if helpers.drop_timer > cooldown then
         cursor_position.y = cursor_position.y + 1
@@ -330,7 +341,7 @@ local function game_loop(board, board_colors, board_win, stats_win, next_win)
 
         local temp_y, temp_x = cursor_position.y, cursor_position.x
 
-        move_cursor(cursor_position, current_block.block, board, key)
+        move_cursor(cursor_position, current_block.block, board, key, level)
 
         if key == curses.KEY_UP then
             rotated_block = rotate_block(current_block.block)
