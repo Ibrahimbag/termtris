@@ -376,8 +376,7 @@ end
 local function game_loop(board, board_colors, board_win, stats_win, next_win, help_win)
     local new_block = true
     local current_block = {block = {}, index = -1}
-    local next_block = get_new_block()
-    local next_block_index = 1
+    local next_block, next_block_index = get_new_block()
     local rotated_block = {}
     local cursor_position = {y = 1, x = BOARD_X / 2}
     local lines_cleared = 0
