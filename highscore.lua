@@ -20,6 +20,8 @@ function t.set_highscore(newScore)
         if not f then return end
         f:write(newScore)
         f:close()
+
+        highscore = newScore
     end
 end
 
