@@ -13,6 +13,7 @@ local function init_curses()
     
     curses.echo(false)
     curses.cbreak()
+    curses.curs_set(0)
 
     local start_y = math.floor(WIN_Y / 2 - (BOARD_Y + 2) / 2)
     local start_x = math.floor(WIN_X / 2 - (BOARD_X * 2 + 2) / 2)
