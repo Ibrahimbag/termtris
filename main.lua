@@ -383,7 +383,6 @@ local function game_loop(board, board_colors, board_win, stats_win, next_win, he
     local lines_cleared = 0
     local points = 0
     local highscore = highscore_t.get_highscore()
-    local highscore_temp = highscore
     local level = 0
 
     draw_help_win(help_win)
