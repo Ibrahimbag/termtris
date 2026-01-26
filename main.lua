@@ -2,6 +2,7 @@ local curses = require 'curses'
 local socket = require 'socket'
 local blocks = require 'blocks'
 local helpers = require 'helpers'
+local highscore_t = require 'highscore'
 
 local WIN_Y, WIN_X = 0, 0
 local BOARD_Y, BOARD_X = 20, 10
@@ -344,10 +345,11 @@ local function calculate_points(lines_cleared, level)
     return points
 end
 
-local function draw_stats(stats_win, points, lines_cleared, level)
-    stats_win:mvaddstr(2, 1, "Points: " .. points)
-    stats_win:mvaddstr(4, 1, "Lines: " .. lines_cleared)
-    stats_win:mvaddstr(6, 1, "Level: " .. level)
+local function draw_stats(stats_win, highscore, points, lines_cleared, level)
+    stats_win:mvaddstr(2, 1, "Highscore: " .. highscore)
+    stats_win:mvaddstr(4, 1, "Points: " .. points)
+    stats_win:mvaddstr(6, 1, "Lines: " .. lines_cleared)
+    stats_win:mvaddstr(8, 1, "Level: " .. level)
 end
 
 local function draw_next(next_win, next_block, next_block_index)
@@ -380,6 +382,8 @@ local function game_loop(board, board_colors, board_win, stats_win, next_win, he
     local cursor_position = {y = 1, x = BOARD_X / 2}
     local lines_cleared = 0
     local points = 0
+    local highscore = highscore_t.get_highscore()
+    local highscore_temp = highscore
     local level = 0
 
     draw_help_win(help_win)
@@ -441,11 +445,15 @@ local function game_loop(board, board_colors, board_win, stats_win, next_win, he
 
         level = math.floor(lines_cleared / 10)
 
+        if points > highscore then
+            highscore = points
+        end
+
         draw_current_block(current_block, cursor_position, board_win)
 
         draw_board(board, board_colors, board_win)
 
-        draw_stats(stats_win, points, lines_cleared, level)
+        draw_stats(stats_win, highscore, points, lines_cleared, level)
 
         draw_next(next_win, next_block, next_block_index)
 
@@ -464,7 +472,11 @@ local function game_loop(board, board_colors, board_win, stats_win, next_win, he
         socket.sleep(0.07)
    until check_for_exit(key, board)
    
-   help_win:clear()
+    if highscore > highscore_temp then
+        highscore_t.set_highscore(highscore)
+    end
+
+    help_win:clear()
 end
 
 local function main()
