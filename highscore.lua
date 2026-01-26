@@ -16,11 +16,11 @@ end
 
 function t.set_highscore(newScore)
     if newScore > highscore then
-        local f = io.open(filename, "w")  -- overwrite safely
+        local f = io.open(filename, "w")
         if not f then return end
         f:write(newScore)
         f:close()
-    end  
+    end
 end
 
 return t

@@ -388,7 +388,7 @@ local function game_loop(board, board_colors, board_win, stats_win, next_win, he
 
     draw_help_win(help_win)
 
-   repeat
+    repeat
         board_win:clear()
         stats_win:clear()
         next_win:clear()
@@ -470,7 +470,7 @@ local function game_loop(board, board_colors, board_win, stats_win, next_win, he
         next_win:refresh()
 
         socket.sleep(0.07)
-   until check_for_exit(key, board)
+    until check_for_exit(key, board)
    
     if highscore > highscore_temp then
         highscore_t.set_highscore(highscore)
