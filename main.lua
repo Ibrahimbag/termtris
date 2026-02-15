@@ -384,6 +384,7 @@ local function game_loop(board, board_colors, board_win, stats_win, next_win, he
     local points = 0
     local highscore = highscore_t.get_highscore()
     local level = 0
+    local is_paused = false
 
     draw_help_win(help_win)
 
@@ -404,51 +405,65 @@ local function game_loop(board, board_colors, board_win, stats_win, next_win, he
 
         local key = board_win:getch()
 
+        if key == 80 or key == 112 then -- P or p
+            is_paused = not is_paused
+        end
+
         local temp_y, temp_x = cursor_position.y, cursor_position.x
 
-        move_cursor(cursor_position, current_block.block, board, key, level)
+        if not is_paused then
+            move_cursor(cursor_position, current_block.block, board, key, level)
 
-        if key == curses.KEY_UP then
-            local rotated, new_pos = try_rotate_and_kick(current_block.block, cursor_position, board)
+            if key == curses.KEY_UP then
+                local rotated, new_pos = try_rotate_and_kick(current_block.block, cursor_position, board)
 
-            if rotated and new_pos then
-                current_block.block = rotated
-                cursor_position.x = new_pos.x
-                cursor_position.y = new_pos.y
-                rotated_block = rotated
+                if rotated and new_pos then
+                    current_block.block = rotated
+                    cursor_position.x = new_pos.x
+                    cursor_position.y = new_pos.y
+                    rotated_block = rotated
+                else
+                    rotated_block = nil
+                end
             else
                 rotated_block = nil
             end
-        else
-            rotated_block = nil
+
+            local block_collided = check_wall_collision(current_block.block, cursor_position)
+
+            if block_collided and rotated_block == nil then
+                cursor_position.x = temp_x
+            end
+
+            block_collided = check_block_collision(current_block.block, cursor_position, board)
+
+            if block_collided then
+                helpers.place_timer = helpers.place_timer + delta_time
+                cursor_position.y, cursor_position.x = temp_y, temp_x
+            end
+
+            local lines_cleared_temp = clear_lines(board, board_colors)
+
+            points = points + calculate_points(lines_cleared_temp, level)
+
+            lines_cleared = lines_cleared + lines_cleared_temp
+
+            level = math.floor(lines_cleared / 10)
+
+            if points > highscore then
+                highscore = points
+            end
+
+            draw_current_block(current_block, cursor_position, board_win)
+
+            if helpers.place_timer > 0.6 then
+                place_block(current_block, board, board_colors, cursor_position)
+                new_block = true
+                cursor_position.y = 1
+                cursor_position.x = BOARD_X / 2
+                helpers.place_timer = 0
+            end
         end
-
-        local block_collided = check_wall_collision(current_block.block, cursor_position)
-
-        if block_collided and rotated_block == nil then
-            cursor_position.x = temp_x
-        end
-
-        block_collided = check_block_collision(current_block.block, cursor_position, board)
-
-        if block_collided then
-            helpers.place_timer = helpers.place_timer + delta_time
-            cursor_position.y, cursor_position.x = temp_y, temp_x
-        end
-
-        local lines_cleared_temp = clear_lines(board, board_colors)
-
-        points = points + calculate_points(lines_cleared_temp, level)
-
-        lines_cleared = lines_cleared + lines_cleared_temp
-
-        level = math.floor(lines_cleared / 10)
-
-        if points > highscore then
-            highscore = points
-        end
-
-        draw_current_block(current_block, cursor_position, board_win)
 
         draw_board(board, board_colors, board_win)
 
@@ -456,12 +471,15 @@ local function game_loop(board, board_colors, board_win, stats_win, next_win, he
 
         draw_next(next_win, next_block, next_block_index)
 
-        if helpers.place_timer > 0.6 then
-            place_block(current_block, board, board_colors, cursor_position)
-            new_block = true
-            cursor_position.y = 1
-            cursor_position.x = BOARD_X / 2
-            helpers.place_timer = 0
+        if is_paused then
+            local rows, cols = board_win:getmaxyx()
+
+            local py = math.floor(rows / 2)
+            local px = math.floor(cols / 2) - 4
+
+            board_win:attron(curses.A_REVERSE)
+            board_win:mvaddstr(py, px, " PAUSED ")
+            board_win:attroff(curses.A_REVERSE)
         end
 
         board_win:refresh()
