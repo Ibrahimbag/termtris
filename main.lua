@@ -374,6 +374,19 @@ local function draw_next(next_win, next_block, next_block_index)
     end
 end
 
+local function display_board_message(board_win, msg)
+    local rows, cols = board_win:getmaxyx()
+
+    local msg_center_offset = math.floor(msg:len() / 2)
+
+    local cy = math.floor(rows / 2)
+    local cx = math.floor(cols / 2) - msg_center_offset
+
+    board_win:attron(curses.A_REVERSE)
+    board_win:mvaddstr(cy, cx, msg)
+    board_win:attroff(curses.A_REVERSE)
+end
+
 local function game_loop(board, board_colors, board_win, stats_win, next_win, help_win)
     local new_block = true
     local current_block = {block = {}, index = -1}
@@ -385,6 +398,7 @@ local function game_loop(board, board_colors, board_win, stats_win, next_win, he
     local highscore = highscore_t.get_highscore()
     local level = 0
     local is_paused = false
+    local key
 
     draw_help_win(help_win)
 
@@ -403,7 +417,7 @@ local function game_loop(board, board_colors, board_win, stats_win, next_win, he
             new_block = false
         end
 
-        local key = board_win:getch()
+        key = board_win:getch()
 
         if key == 80 or key == 112 then -- P or p
             is_paused = not is_paused
@@ -472,14 +486,7 @@ local function game_loop(board, board_colors, board_win, stats_win, next_win, he
         draw_next(next_win, next_block, next_block_index)
 
         if is_paused then
-            local rows, cols = board_win:getmaxyx()
-
-            local py = math.floor(rows / 2)
-            local px = math.floor(cols / 2) - 4
-
-            board_win:attron(curses.A_REVERSE)
-            board_win:mvaddstr(py, px, " PAUSED ")
-            board_win:attroff(curses.A_REVERSE)
+            display_board_message(board_win, " PAUSED ")
         end
 
         board_win:refresh()
@@ -492,6 +499,23 @@ local function game_loop(board, board_colors, board_win, stats_win, next_win, he
     highscore_t.set_highscore(highscore)
 
     help_win:clear()
+
+    return key
+end
+
+local function ask_for_restart(board_win)
+    board_win:nodelay(false)
+
+    display_board_message(board_win, " R TO RESTART ")
+
+    local key = board_win:getch()
+
+    if key == 82 or key == 114 then -- R or r
+        board_win:nodelay(true)
+        return true
+    else
+        return false
+    end
 end
 
 local function main()
@@ -512,9 +536,17 @@ local function main()
     local board = {}
     local board_colors = {}
 
-    init_board(board, board_colors)
+    local key 
 
-    game_loop(board, board_colors, board_win, stats_win, next_win, help_win)
+    repeat
+        init_board(board, board_colors)
+
+        key = game_loop(board, board_colors, board_win, stats_win, next_win, help_win)
+
+        if key == 81 or key == 113 then
+            break
+        end
+    until not ask_for_restart(board_win)
 
     curses.endwin()
 end
